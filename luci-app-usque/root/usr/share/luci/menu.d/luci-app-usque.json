@@ -1,0 +1,13 @@
+{
+	"admin/services/usque": {
+		"title": "WARP (usque)",
+		"order": 62,
+		"action": {
+			"type": "view",
+			"path": "usque/overview"
+		},
+		"depends": {
+			"acl": [ "luci-app-usque" ]
+		}
+	}
+}

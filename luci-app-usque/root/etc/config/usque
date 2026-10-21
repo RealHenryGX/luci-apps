@@ -1,0 +1,5 @@
+config main 'main'
+	option bind '127.0.0.1'
+	option http_port '7902'
+	option socks_full_port '7903'
+

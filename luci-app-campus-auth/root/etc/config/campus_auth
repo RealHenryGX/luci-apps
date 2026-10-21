@@ -1,0 +1,14 @@
+config main 'main'
+	option username 'YOUR_STUDENT_ID'
+	option password 'YOUR_PASSWORD'
+	# Portal base URL, e.g. http://10.0.0.1/eportal/
+	# Open any http site while logged out and copy the address you get redirected to
+	# (keep the trailing slash). Leave empty to learn it from the redirect at login.
+	option portal ''
+	# Service name requested by some campuses; usually safe to leave empty.
+	option service ''
+	# WAN interface that carries the campus network.
+	option iface 'wan'
+	# Probe targets, space separated. Plain IPs so no DNS is needed while logged out.
+	option probe '223.5.5.5 119.29.29.29 www.baidu.com'
+	option auto '1'

@@ -1,0 +1,17 @@
+{
+	"luci-app-usque": {
+		"description": "Grant access to usque (WARP/MASQUE) control",
+		"read": {
+			"uci": [ "usque" ],
+			"file": {
+				"/usr/local/sbin/usque-ctl": [ "exec" ]
+			}
+		},
+		"write": {
+			"uci": [ "usque" ],
+			"file": {
+				"/usr/local/sbin/usque-ctl": [ "exec" ]
+			}
+		}
+	}
+}

@@ -1,0 +1,79 @@
+#!/bin/sh
+# usque control/status helper — used by LuCI (luci-app-usque) and for manual debugging
+# usage: usque-ctl <status|probe|account|start|stop|restart|register>
+
+CTL=/etc/init.d/usque
+CFG=/etc/usque/config.json
+
+. /lib/functions.sh
+
+load_conf() {
+	config_load usque
+	config_get BIND  main bind       "127.0.0.1"
+	config_get HPORT main http_port       "7902"
+	config_get SPORT main socks_full_port "7903"
+	config_get SNI   main sni        ""
+}
+
+pid_of() {
+	ps w | grep "[u]sque $1 " | awk '{ print $1 }' | head -n1
+}
+
+case "$1" in
+status)
+	load_conf
+	spid=$(pid_of socks)
+	hpid=$(pid_of l4-http-proxy)
+	[ -f "$CFG" ] && cfgok=true || cfgok=false
+	printf '{"config":%s,"bind":"%s","socks_port":"%s","http_port":"%s","sni":"%s","socks":{"pid":"%s","up":%s},"http":{"pid":"%s","up":%s}}\n' \
+		"$cfgok" "$BIND" "$SPORT" "$HPORT" "$SNI" \
+		"$spid" "$([ -n "$spid" ] && echo true || echo false)" \
+		"$hpid" "$([ -n "$hpid" ] && echo true || echo false)"
+	;;
+
+probe)
+	load_conf
+	out=$(curl -s -m 12 -x "http://127.0.0.1:$HPORT" https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null)
+	via="http://127.0.0.1:$HPORT"
+	if [ -z "$out" ]; then
+		out=$(curl -s -m 12 -x "socks5h://127.0.0.1:$SPORT" https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null)
+		via="socks5h://127.0.0.1:$SPORT"
+	fi
+	if [ -z "$out" ]; then
+		printf '{"ok":false,"error":"no response through %s or socks5h://127.0.0.1:%s"}\n' "http://127.0.0.1:$HPORT" "$SPORT"
+		exit 0
+	fi
+	warp=$(echo "$out" | sed -n 's/^warp=//p')
+	ip=$(echo "$out" | sed -n 's/^ip=//p')
+	colo=$(echo "$out" | sed -n 's/^colo=//p')
+	loc=$(echo "$out" | sed -n 's/^loc=//p')
+	printf '{"ok":true,"warp":"%s","ip":"%s","colo":"%s","loc":"%s","via":"%s"}\n' "$warp" "$ip" "$colo" "$loc" "$via"
+	;;
+
+account)
+	[ -f "$CFG" ] || { echo '{"ok":false,"error":"not registered"}'; exit 0; }
+	out=$(usque account info -c "$CFG" 2>&1)
+	type=$(echo "$out" | sed -n 's/^Type:[[:space:]]*//p')
+	created=$(echo "$out" | sed -n 's/^Created:[[:space:]]*//p')
+	lic=$(echo "$out" | sed -n 's/^Licence Key:[[:space:]]*//p')
+	[ -n "$lic" ] && lic="${lic%%-*}-***-${lic##*-}"
+	devs=$(usque account devices -c "$CFG" 2>/dev/null | grep -c '^Device #')
+	printf '{"ok":true,"type":"%s","created":"%s","license":"%s","devices":%s}\n' \
+		"$type" "$created" "$lic" "${devs:-0}"
+	;;
+
+register)
+	[ -f "$CFG" ] && { echo '{"ok":false,"error":"config already exists"}'; exit 1; }
+	host=$(uci -q get system.@system[0].hostname || echo OpenWrt)
+	usque register -a -c "$CFG" -n "$host" 2>&1
+	;;
+
+start|stop|restart)
+	"$CTL" "$1"
+	;;
+
+*)
+	echo "usage: usque-ctl <status|probe|account|start|stop|restart|register>" >&2
+	exit 1
+	;;
+esac

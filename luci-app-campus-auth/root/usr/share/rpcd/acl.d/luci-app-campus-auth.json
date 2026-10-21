@@ -1,0 +1,17 @@
+{
+	"luci-app-campus-auth": {
+		"description": "Grant access to campus ePortal auth",
+		"read": {
+			"uci": [ "campus_auth" ],
+			"file": {
+				"/usr/local/sbin/campus-login.sh": [ "exec" ]
+			}
+		},
+		"write": {
+			"uci": [ "campus_auth" ],
+			"file": {
+				"/usr/local/sbin/campus-login.sh": [ "exec" ]
+			}
+		}
+	}
+}
